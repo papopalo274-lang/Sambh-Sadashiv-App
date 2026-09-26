@@ -1,48 +1,26 @@
 [app]
-
-# (str) Title of your application
 title = Sambh Sadashiv
-
-# (str) Package name
 package.name = sambhsadashiv
-
-# (str) Package domain (needed for android packaging)
 package.domain = org.test
-
-# (str) Source code where the main.py is located
 source.dir = .
+source.include_exts = py,png,jpg,kv,atlas,ttf
 
-# (list) Source files to include
-source.include_exts = py,png,jpg,kv,atlas
+requirements = python3,kivy,pyjnius,sqlite3,requests,urllib3
 
-# (list) Application requirements
-requirements = python3,kivy,pyjnius,sqlite3
-
-# (str) Application version
 version = 0.1
-
-# (str) Icon of the application (आपकी फोटो का नाम icon.png होना चाहिए)
 icon.filename = %(source.dir)s/icon.png
 
-# (list) Permissions
-android.permissions = INTERNET
+# App Orientation: 'portrait' सेट करने से ऐप डिफ़ॉल्ट पोर्ट्रेट में खुलेगी
+orientation = portrait
 
-# (int) Target Android API
-android.api = 33
+# Permissions for File Storage & Gallery Read
+android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, READ_MEDIA_IMAGES
 
-# (int) Minimum API supported
-android.minapi = 21
-
-# (bool) Accept SDK license automatically
+android.api = 34
+android.minapi = 24
 android.accept_sdk_license = True
-
-# (str) The Android arch to build for
 android.archs = arm64-v8a
 
 [buildozer]
-
-# (int) Log level (0 = error only, 1 = info, 2 = debug)
 log_level = 2
-
-# (int) Display warning if buildozer is run as root
 warn_on_root = 1
