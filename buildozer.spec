@@ -18,7 +18,7 @@ source.dir = .
 # (list) Source files extensions
 source.include_exts = py,png,jpg,jpeg,ttf,kv
 
-# (list) Requirements: Kivy 2.3.0 pinned with python-for-android 2024.1.21
+# (list) Requirements
 requirements = python3,kivy==2.3.0,pillow,urllib3,charset-normalizer,requests
 
 # (str) Supported orientation
@@ -28,7 +28,7 @@ orientation = portrait
 fullscreen = 0
 
 # (list) Permissions
-android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
+android.permissions = INTERNET
 
 # (int) Target Android API & Minimum API
 android.api = 33
