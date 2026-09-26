@@ -1,51 +1,27 @@
 [app]
-
-# (str) Title of your application
-title = Sambh Sadashiv
-
-# (str) Application version
-version = 1.0.0
-
-# (str) Package name
-package.name = sambhsadashiv
-
-# (str) Package domain
-package.domain = org.devotional
-
-# (str) Source code directory
+title = Naam Jaap Counter
+package.name = naamjaap
+package.domain = org.naamjaap
 source.dir = .
-
-# (list) Source files extensions
-source.include_exts = py,png,jpg,jpeg,ttf,kv
-
-# (list) Requirements
-requirements = python3,kivy==2.3.0,pillow,urllib3,charset-normalizer,requests
-
-# (str) Supported orientation
-orientation = portrait
-
-# (bool) Fullscreen mode
-fullscreen = 0
-
-# (list) Permissions
-android.permissions = INTERNET
-
-# (int) Target Android API & Minimum API
+source.include_exts = py,png,jpg,kv,atlas,db,ttf
+version = 2.0
+requirements = python3==3.11.6,kivy==2.3.0,hostpython3==3.11.6,android
+android.permissions = WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,VIBRATE
 android.api = 33
 android.minapi = 21
-
-# (str) Android NDK version
 android.ndk = 25b
-
-# (bool) Auto-accept SDK license
+android.ndk_api = 21
 android.accept_sdk_license = True
-
-# (str) Target Architectures
-android.archs = arm64-v8a
-
-# (bool) Enable AndroidX
+android.entrypoint = org.kivy.android.PythonActivity
+android.apptheme = "@android:style/Theme.NoTitleBar"
+orientation = portrait
+fullscreen = 0
+android.presplash_color = #0A0514
 android.enable_androidx = True
+android.archs = arm64-v8a
 
 [buildozer]
 log_level = 2
-warn_on_root = 1
+warn_on_root = 0
+build_dir = ./.buildozer
+bin_dir = ./bin
