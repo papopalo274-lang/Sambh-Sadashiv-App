@@ -266,7 +266,6 @@ class SambhSadashivApp(App):
         beads = count % self.target_count
         completed = count // self.target_count
 
-        # Display based on counter type selected
         if self.counter_type == "Hindi (१, २, ३)":
             self.count_lbl.text = to_devanagari(count)
             self.mala_lbl.text = f"माला पूर्ण: {to_devanagari(completed)}  |  मनका: {to_devanagari(beads)}/{to_devanagari(self.target_count)}"
