@@ -1,23 +1,22 @@
 import os
+import math
 import urllib.request
 from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.button import Button
-from kivy.uix.label import Label
-from kivy.uix.image import Image
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.button import Button
+from kivy.uix.image import Image
 from kivy.uix.spinner import Spinner
 from kivy.uix.popup import Popup
 from kivy.uix.textinput import TextInput
-from kivy.uix.progressbar import ProgressBar
-from kivy.uix.filechooser import FileChooserIconView
 from kivy.core.text import LabelBase
+from kivy.graphics import Color, Ellipse, Line, Rectangle, PushMatrix, PopMatrix, Rotate
+from kivy.animation import Animation
 from kivy.clock import Clock
-from kivy.graphics import Color, RoundedRectangle, Line
 from datetime import datetime
 
-# 1. Automatic Hindi Font Setup
+# Font setup for Devanagari (Hindi)
 FONT_PATH = "NotoSansDevanagari.ttf"
 if not os.path.exists(FONT_PATH):
     font_url = "https://github.com/google/fonts/raw/main/ofl/notosansdevanagari/NotoSansDevanagari%5Bwdth%2Cwght%5D.ttf"
@@ -29,31 +28,71 @@ if not os.path.exists(FONT_PATH):
 if os.path.exists(FONT_PATH):
     LabelBase.register(name="Hindi", fn_regular=FONT_PATH)
 
-# Helper function to convert standard digits to Hindi Devanagari numerals
 def to_devanagari(num):
-    hindi_digits = str(num).translate(str.maketrans("0123456789", "०१२३४५६७८९"))
-    return hindi_digits
+    return str(num).translate(str.maketrans("0123456789", "०१२३४५६७८९"))
 
-# Custom Glassmorphic Card Container with Borders
-class ModernGlassCard(BoxLayout):
-    def __init__(self, bg_color=(0.08, 0.1, 0.15, 0.7), border_color=(1, 1, 1, 0.15), radius=[24,], **kwargs):
+# --- CENTRAL GLOWING OM MANDALA (Interactive Tap Target) ---
+class SacredOmMandala(FloatLayout):
+    def __init__(self, on_tap_callback, **kwargs):
         super().__init__(**kwargs)
+        self.on_tap_callback = on_tap_callback
+        self.angle = 0
+        self.bead_progress = 0  # 0 to 108
+
         with self.canvas.before:
-            self.rect_color = Color(*bg_color)
-            self.rect = RoundedRectangle(pos=self.pos, size=self.size, radius=radius)
-            self.line_color = Color(*border_color)
-            self.line = Line(rounded_rectangle=(self.pos[0], self.pos[1], self.size[0], self.size[1], radius[0]), width=1.2)
-        self.bind(pos=self.update_rect, size=self.update_rect)
+            PushMatrix()
+            self.rot = Rotate(angle=0, axis=(0, 0, 1))
+            
+            # Outer Temple Ring (Gold)
+            self.col_gold = Color(0.78, 0.57, 0.16, 0.4)
+            self.ring_outer = Line(circle=(0, 0, 140), width=2)
+            
+            # Mala Beads Ring
+            self.col_saffron = Color(1.0, 0.42, 0.21, 0.8)
+            self.ring_inner = Line(circle=(0, 0, 110), width=3)
+            
+            # Glowing Aura Behind OM
+            self.col_aura = Color(0.48, 0.18, 0.74, 0.25)
+            self.aura = Ellipse(pos=(-100, -100), size=(200, 200))
+            
+            PopMatrix()
 
-    def update_rect(self, instance, value):
-        self.rect.pos = instance.pos
-        self.rect.size = instance.size
-        self.line.rounded_rectangle = (instance.pos[0], instance.pos[1], instance.size[0], instance.size[1], 24)
+        font_kw = {'font_name': 'Hindi'} if os.path.exists(FONT_PATH) else {}
+        self.om_label = Label(
+            text="🕉️",
+            font_size='90sp',
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            color=(1.0, 0.82, 0.35, 1),
+            **font_kw
+        )
+        self.add_widget(self.om_label)
+        self.bind(pos=self.update_graphics, size=self.update_graphics)
 
-    def set_theme_colors(self, bg_col, border_col):
-        self.rect_color.rgba = bg_col
-        self.line_color.rgba = border_col
+    def update_graphics(self, instance, value):
+        cx, cy = self.center_x, self.center_y
+        self.rot.origin = (cx, cy)
+        self.ring_outer.circle = (cx, cy, self.width * 0.42)
+        self.ring_inner.circle = (cx, cy, self.width * 0.35)
+        
+        aura_size = self.width * 0.55
+        self.aura.pos = (cx - aura_size / 2, cy - aura_size / 2)
+        self.aura.size = (aura_size, aura_size)
 
+    def on_touch_down(self, touch):
+        if self.collide_point(*touch.pos):
+            # Pulse & Rotate Animation on Tap
+            anim = Animation(angle=self.rot.angle + 30, d=0.25, t='out_quad')
+            anim.start(self.rot)
+            
+            # Glow scale effect
+            anim_label = Animation(font_size='105sp', d=0.1) + Animation(font_size='90sp', d=0.15)
+            anim_label.start(self.om_label)
+            
+            self.on_tap_callback()
+            return True
+        return super().on_touch_down(touch)
+
+# --- MAIN SACRED TEMPLE APP ---
 class SambhSadashivApp(App):
     def build(self):
         self.mantra_counts = {
@@ -65,198 +104,82 @@ class SambhSadashivApp(App):
         }
         self.current_mantra = "साम्ब सदाशिव"
         self.target_count = 108
-        self.counter_type = "Standard (1, 2, 3)"
-        self.current_theme = "Glass Dark"
 
-        # Wallpapers
-        self.wallpapers = ['bg1.jpg', 'bg2.jpg', 'bg3.jpg']
-        self.wp_index = 0
-
-        # Root Layout
         self.root = FloatLayout()
 
-        # Background Image
-        self.bg_image = Image(
-            source=self.wallpapers[0] if os.path.exists(self.wallpapers[0]) else '',
-            allow_stretch=True,
-            keep_ratio=False,
-            size_hint=(1, 1),
-            pos_hint={'x': 0, 'y': 0}
-        )
-        self.root.add_widget(self.bg_image)
+        # Background - Deep Temple Void (#0A0514)
+        with self.root.canvas.before:
+            Color(0.04, 0.02, 0.08, 1) # #0A0514
+            self.bg_rect = Rectangle(pos=self.root.pos, size=self.root.size)
+        self.root.bind(pos=self.update_bg, size=self.update_bg)
 
-        # Main Layout Box
-        main_box = BoxLayout(orientation='vertical', padding=[16, 20, 16, 16], spacing=10)
+        main_box = BoxLayout(orientation='vertical', padding=[20, 24, 20, 20], spacing=12)
         font_kw = {'font_name': 'Hindi'} if os.path.exists(FONT_PATH) else {}
 
-        # --- TOP HEADER BAR ---
-        self.header_card = ModernGlassCard(orientation='horizontal', size_hint=(1, 0.08), padding=[12, 6])
-        self.time_lbl = Label(text="", font_size='13sp', color=(1, 0.85, 0.4, 1), bold=True, **font_kw)
-        self.header_card.add_widget(self.time_lbl)
+        # 1. Header Bar (Temple Night Aesthetic)
+        header = BoxLayout(orientation='horizontal', size_hint=(1, 0.08))
+        self.time_lbl = Label(text="", font_size='13sp', color=(0.78, 0.57, 0.26, 1), bold=True, **font_kw)
+        header.add_widget(self.time_lbl)
 
-        btn_settings = Button(text="⚙️ सेटिंग्स", size_hint=(0.32, 1), font_size='13sp', background_color=(0.2, 0.3, 0.5, 0.9), **font_kw)
-        btn_settings.bind(on_press=self.open_settings_popup)
-        self.header_card.add_widget(btn_settings)
-        main_box.add_widget(self.header_card)
+        btn_settings = Button(text="⚙️", size_hint=(0.18, 1), font_size='18sp', background_color=(0.1, 0.04, 0.18, 0.9), color=(1,0.8,0.4,1))
+        btn_settings.bind(on_press=self.open_settings)
+        header.add_widget(btn_settings)
+        main_box.add_widget(header)
 
-        # --- MANTRA SELECTOR CARD ---
-        self.select_card = ModernGlassCard(orientation='vertical', size_hint=(1, 0.14), padding=10, spacing=4)
-        select_lbl = Label(text="मंत्र चयन (Select Mantra):", font_size='12sp', color=(0.85, 0.85, 0.9, 1), size_hint=(1, 0.3), **font_kw)
-        self.select_card.add_widget(select_lbl)
-
-        spin_box = BoxLayout(orientation='horizontal', spacing=8, size_hint=(1, 0.7))
+        # 2. Mantra Selector Spinner
+        spin_box = BoxLayout(orientation='horizontal', size_hint=(1, 0.08), spacing=10)
         self.spinner = Spinner(
             text=self.current_mantra,
             values=list(self.mantra_counts.keys()),
-            size_hint=(0.72, 1),
-            background_color=(0.12, 0.18, 0.28, 0.9),
-            color=(1, 1, 1, 1),
+            size_hint=(0.75, 1),
+            background_color=(0.1, 0.04, 0.18, 0.95),
+            color=(1, 0.85, 0.4, 1),
             font_size='16sp',
             **font_kw
         )
         self.spinner.bind(text=self.on_mantra_change)
         spin_box.add_widget(self.spinner)
 
-        btn_add = Button(text="+ नया", size_hint=(0.28, 1), background_color=(0.15, 0.55, 0.35, 0.9), font_size='14sp', bold=True, **font_kw)
+        btn_add = Button(text="+", size_hint=(0.25, 1), background_color=(1.0, 0.42, 0.21, 0.9), font_size='22sp', bold=True)
         btn_add.bind(on_press=self.open_add_popup)
         spin_box.add_widget(btn_add)
-        self.select_card.add_widget(spin_box)
-        main_box.add_widget(self.select_card)
+        main_box.add_widget(spin_box)
 
-        # --- MAIN COUNTER DISPLAY CARD ---
-        self.counter_card = ModernGlassCard(orientation='vertical', size_hint=(1, 0.42), padding=12, spacing=6)
+        # 3. Main Counter Title
+        self.mantra_title = Label(text=f"✨ {self.current_mantra} ✨", font_size='22sp', bold=True, color=(1.0, 0.82, 0.35, 1), size_hint=(1, 0.08), **font_kw)
+        main_box.add_widget(self.mantra_title)
+
+        # 4. Sacred OM Central Mandala Target
+        self.mandala_container = FloatLayout(size_hint=(1, 0.45))
+        self.mandala = SacredOmMandala(on_tap_callback=self.increment_counter, size_hint=(0.8, 0.8), pos_hint={'center_x': 0.5, 'center_y': 0.5})
+        self.mandala_container.add_widget(self.mandala)
+        main_box.add_widget(self.mandala_container)
+
+        # 5. Live Digital Devanagari Counter & Mala Progress
+        self.count_lbl = Label(text="०", font_size='55sp', bold=True, color=(1.0, 0.42, 0.21, 1), size_hint=(1, 0.12), **font_kw)
+        main_box.add_widget(self.count_lbl)
+
+        self.mala_lbl = Label(text="माला पूर्ण: ०  |  मनका: ०/१०८", font_size='15sp', color=(0.8, 0.7, 0.9, 1), size_hint=(1, 0.06), **font_kw)
+        main_box.add_widget(self.mala_lbl)
+
+        # 6. Bottom Action Controls
+        bottom_box = BoxLayout(orientation='horizontal', size_hint=(1, 0.09), spacing=12)
         
-        self.mantra_title = Label(text=f"✨ {self.current_mantra} ✨", font_size='22sp', bold=True, color=(1, 0.8, 0.2, 1), size_hint=(1, 0.2), **font_kw)
-        self.counter_card.add_widget(self.mantra_title)
-
-        self.count_lbl = Label(text="0", font_size='70sp', bold=True, color=(0.2, 1, 0.75, 1), size_hint=(1, 0.48), **font_kw)
-        self.counter_card.add_widget(self.count_lbl)
-
-        # Mala Progress Bar
-        self.progress_bar = ProgressBar(max=self.target_count, value=0, size_hint=(1, 0.08))
-        self.counter_card.add_widget(self.progress_bar)
-
-        self.mala_lbl = Label(text="माला पूर्ण: 0  |  मनका: 0/108", font_size='14sp', color=(0.9, 0.9, 0.95, 1), size_hint=(1, 0.24), **font_kw)
-        self.counter_card.add_widget(self.mala_lbl)
-        main_box.add_widget(self.counter_card)
-
-        # --- GIANT TAP BUTTON ---
-        self.btn_tap = Button(
-            text="🙏 जाप करें (TAP)",
-            size_hint=(1, 0.22),
-            font_size='26sp',
-            bold=True,
-            background_normal='',
-            background_color=(0.9, 0.4, 0.1, 0.92),
-            **font_kw
-        )
-        self.btn_tap.bind(on_press=self.increment_counter)
-        main_box.add_widget(self.btn_tap)
-
-        # --- BOTTOM ACTION GRID ---
-        bottom_grid = GridLayout(cols=2, spacing=8, size_hint=(1, 0.14))
-        
-        btn_wp = Button(text="🖼 वॉलपेपर बदलें", font_size='14sp', background_color=(0.2, 0.35, 0.55, 0.85), **font_kw)
-        btn_wp.bind(on_press=self.change_wallpaper)
-        bottom_grid.add_widget(btn_wp)
-
-        btn_reset = Button(text="🔄 रीसेट", font_size='14sp', background_color=(0.75, 0.15, 0.15, 0.85), **font_kw)
+        btn_reset = Button(text="🔄 रीसेट", font_size='14sp', background_color=(0.5, 0.1, 0.1, 0.85), color=(1,1,1,1), **font_kw)
         btn_reset.bind(on_press=self.reset_counter)
-        bottom_grid.add_widget(btn_reset)
+        bottom_box.add_widget(btn_reset)
 
-        main_box.add_widget(bottom_grid)
+        main_box.add_widget(bottom_box)
 
         self.root.add_widget(main_box)
         Clock.schedule_interval(self.update_time, 1)
         return self.root
 
-    # --- SETTINGS POPUP MENU ---
-    def open_settings_popup(self, instance):
-        font_kw = {'font_name': 'Hindi'} if os.path.exists(FONT_PATH) else {}
-        content = BoxLayout(orientation='vertical', padding=15, spacing=12)
+    def update_bg(self, instance, value):
+        self.bg_rect.pos = instance.pos
+        self.bg_rect.size = instance.size
 
-        # Theme Selector
-        content.add_widget(Label(text="🎨 ऐप थीम चुनें (UI Theme):", font_size='14sp', bold=True, **font_kw))
-        theme_spinner = Spinner(
-            text=self.current_theme,
-            values=["Glass Dark", "Saffron Gold", "Minimal Light"],
-            size_hint=(1, 0.8),
-            **font_kw
-        )
-        content.add_widget(theme_spinner)
-
-        # Counter Type Selector
-        content.add_widget(Label(text="🔢 डिफ़ॉल्ट काउंटर टाइप:", font_size='14sp', bold=True, **font_kw))
-        counter_type_spinner = Spinner(
-            text=self.counter_type,
-            values=["Standard (1, 2, 3)", "Hindi (१, २, ३)", "Devotional Words (शिव/राम/ॐ)"],
-            size_hint=(1, 0.8),
-            **font_kw
-        )
-        content.add_widget(counter_type_spinner)
-
-        # Gallery Custom Wallpaper Import
-        btn_import_wp = Button(text="📁 गैलरी से वॉलपेपर चुनें", size_hint=(1, 0.9), background_color=(0.2, 0.5, 0.6, 1), **font_kw)
-        btn_import_wp.bind(on_press=self.open_file_chooser)
-        content.add_widget(btn_import_wp)
-
-        # Close/Save Button
-        btn_close = Button(text="लागू करें (Apply Settings)", size_hint=(1, 0.9), background_color=(0.1, 0.6, 0.3, 1), **font_kw)
-        popup = Popup(title="⚙️ ऐप सेटिंग्स", content=content, size_hint=(0.9, 0.6), **font_kw)
-
-        def apply_settings(btn):
-            self.current_theme = theme_spinner.text
-            self.counter_type = counter_type_spinner.text
-            self.apply_theme(self.current_theme)
-            self.update_display()
-            popup.dismiss()
-
-        btn_close.bind(on_press=apply_settings)
-        content.add_widget(btn_close)
-        popup.open()
-
-    # --- Apply Dynamic Themes ---
-    def apply_theme(self, theme_name):
-        if theme_name == "Saffron Gold":
-            bg_c = (0.25, 0.1, 0.02, 0.8)
-            border_c = (1, 0.7, 0.2, 0.5)
-            self.count_lbl.color = (1, 0.8, 0.1, 1)
-        elif theme_name == "Minimal Light":
-            bg_c = (0.95, 0.95, 0.98, 0.85)
-            border_c = (0, 0, 0, 0.1)
-            self.count_lbl.color = (0.05, 0.45, 0.85, 1)
-        else:  # Glass Dark
-            bg_c = (0.08, 0.1, 0.15, 0.7)
-            border_c = (1, 1, 1, 0.15)
-            self.count_lbl.color = (0.2, 1, 0.75, 1)
-
-        self.header_card.set_theme_colors(bg_c, border_c)
-        self.select_card.set_theme_colors(bg_c, border_c)
-        self.counter_card.set_theme_colors(bg_c, border_c)
-
-    # --- File Chooser for Importing Wallpapers ---
-    def open_file_chooser(self, instance):
-        font_kw = {'font_name': 'Hindi'} if os.path.exists(FONT_PATH) else {}
-        content = BoxLayout(orientation='vertical')
-        file_chooser = FileChooserIconView(filters=['*.jpg', '*.png', '*.jpeg'])
-        content.add_widget(file_chooser)
-
-        btn_select = Button(text="सेट करें", size_hint=(1, 0.15), background_color=(0.1, 0.6, 0.3, 1), **font_kw)
-        popup = Popup(title="इमेज फाइल चुनें", content=content, size_hint=(0.95, 0.85), **font_kw)
-
-        def set_image(btn):
-            if file_chooser.selection:
-                selected_file = file_chooser.selection[0]
-                self.bg_image.source = selected_file
-                self.bg_image.reload()
-            popup.dismiss()
-
-        btn_select.bind(on_press=set_image)
-        content.add_widget(btn_select)
-        popup.open()
-
-    # --- Core Logic Functions ---
-    def increment_counter(self, instance):
+    def increment_counter(self):
         count = self.mantra_counts[self.current_mantra] + 1
         self.mantra_counts[self.current_mantra] = count
         self.update_display()
@@ -266,19 +189,8 @@ class SambhSadashivApp(App):
         beads = count % self.target_count
         completed = count // self.target_count
 
-        if self.counter_type == "Hindi (१, २, ३)":
-            self.count_lbl.text = to_devanagari(count)
-            self.mala_lbl.text = f"माला पूर्ण: {to_devanagari(completed)}  |  मनका: {to_devanagari(beads)}/{to_devanagari(self.target_count)}"
-        elif self.counter_type == "Devotional Words (शिव/राम/ॐ)":
-            words = ["ॐ", "शिव", "हर हर महादेव", "सदाशिव", "जय श्री राम"]
-            self.count_lbl.text = words[count % len(words)]
-            self.mala_lbl.text = f"कुल जाप संख्या: {count}  |  माला: {completed}"
-        else:
-            self.count_lbl.text = str(count)
-            self.mala_lbl.text = f"माला पूर्ण: {completed}  |  मनका: {beads}/{self.target_count}"
-
-        self.progress_bar.max = self.target_count
-        self.progress_bar.value = beads if beads != 0 else (self.target_count if count > 0 else 0)
+        self.count_lbl.text = to_devanagari(count)
+        self.mala_lbl.text = f"माला पूर्ण: {to_devanagari(completed)}  |  मनका: {to_devanagari(beads)}/{to_devanagari(108)}"
 
     def reset_counter(self, instance):
         self.mantra_counts[self.current_mantra] = 0
@@ -292,15 +204,15 @@ class SambhSadashivApp(App):
     def open_add_popup(self, instance):
         font_kw = {'font_name': 'Hindi'} if os.path.exists(FONT_PATH) else {}
         content = BoxLayout(orientation='vertical', padding=12, spacing=10)
-        self.txt_input = TextInput(hint_text="मंत्र का नाम दर्ज करें...", multiline=False, font_size='16sp', **font_kw)
+        self.txt_input = TextInput(hint_text="नया मंत्र लिखें...", multiline=False, font_size='16sp', **font_kw)
         content.add_widget(self.txt_input)
 
-        btn_save = Button(text="जोड़ें (Save)", size_hint=(1, 0.4), background_color=(0.1, 0.6, 0.3, 1), **font_kw)
+        btn_save = Button(text="जोड़ें", size_hint=(1, 0.4), background_color=(1.0, 0.42, 0.21, 1), **font_kw)
         content.add_widget(btn_save)
 
-        popup = Popup(title="नया मंत्र जोड़ें", content=content, size_hint=(0.85, 0.32), **font_kw)
+        popup = Popup(title="नया मंत्र दर्ज करें", content=content, size_hint=(0.85, 0.3), **font_kw)
         
-        def save_mantra(btn_inst):
+        def save(btn):
             val = self.txt_input.text.strip()
             if val and val not in self.mantra_counts:
                 self.mantra_counts[val] = 0
@@ -308,16 +220,20 @@ class SambhSadashivApp(App):
                 self.spinner.text = val
             popup.dismiss()
 
-        btn_save.bind(on_press=save_mantra)
+        btn_save.bind(on_press=save)
         popup.open()
 
-    def change_wallpaper(self, instance):
-        if self.wallpapers:
-            self.wp_index = (self.wp_index + 1) % len(self.wallpapers)
-            wp = self.wallpapers[self.wp_index]
-            if os.path.exists(wp):
-                self.bg_image.source = wp
-                self.bg_image.reload()
+    def open_settings(self, instance):
+        font_kw = {'font_name': 'Hindi'} if os.path.exists(FONT_PATH) else {}
+        content = BoxLayout(orientation='vertical', padding=15, spacing=10)
+        content.add_widget(Label(text="🛕 Sacred Temple Theme Active", font_size='16sp', bold=True, **font_kw))
+        content.add_widget(Label(text="अद्वितीय अनुभव के लिए केंद्रीय ॐ प्रतीक पर टैप करें।", font_size='12sp', **font_kw))
+        
+        btn_close = Button(text="ठीक है", size_hint=(1, 0.35), background_color=(0.78, 0.57, 0.26, 1), **font_kw)
+        popup = Popup(title="सेटिंग्स", content=content, size_hint=(0.8, 0.35), **font_kw)
+        btn_close.bind(on_press=popup.dismiss)
+        content.add_widget(btn_close)
+        popup.open()
 
     def update_time(self, dt):
         now = datetime.now()
