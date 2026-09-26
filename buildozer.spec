@@ -3,6 +3,9 @@
 # (str) Title of your application
 title = Sambh Sadashiv
 
+# (str) Application version
+version = 1.0.0
+
 # (str) Package name
 package.name = sambhsadashiv
 
@@ -19,7 +22,6 @@ source.include_exts = py,png,jpg,jpeg,ttf,kv
 # Python 3.11 and stable dependencies fixed for Android build stability
 requirements = python3==3.11.5,kivy==2.3.0,pillow,urllib3==2.1.0,charset-normalizer==3.3.2,requests==2.31.0
 
-# (str) Custom source folders for requirements
 # (str) Supported orientation (landscape, sensorLandscape, portrait or all)
 orientation = portrait
 
