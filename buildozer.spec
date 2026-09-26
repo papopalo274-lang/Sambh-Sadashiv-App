@@ -18,7 +18,7 @@ source.dir = .
 # (list) Source files extensions
 source.include_exts = py,png,jpg,jpeg,ttf,kv
 
-# (list) Requirements: Fix versions to work cleanly with Python 3.10
+# (list) Requirements: Kivy 2.3.0 pinned with python-for-android 2024.1.21
 requirements = python3,kivy==2.3.0,pillow,urllib3,charset-normalizer,requests
 
 # (str) Supported orientation
@@ -40,7 +40,7 @@ android.ndk = 25b
 # (bool) Auto-accept SDK license
 android.accept_sdk_license = True
 
-# (str) Target Architectures (arm64-v8a build setup)
+# (str) Target Architectures
 android.archs = arm64-v8a
 
 # (bool) Enable AndroidX
